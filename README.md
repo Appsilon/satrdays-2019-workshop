@@ -24,6 +24,7 @@ devtools::install_github("Appsilon/semantic.dashboard")
 install.packages("purrrlyr")
 install.packages("tidyverse")
 install.packages("ggvis")
+install.packages("RSQLite")
 ```
 
 Appsilon Data Science
