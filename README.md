@@ -28,6 +28,13 @@ install.packages("RSQLite")
 install.packages(‘rsconnect’)
 ```
 
+### Reading list
+
+- https://github.com/rstudio/shiny-examples/
+- https://shiny.rstudio.com/articles/understanding-reactivity.html 
+- https://appsilon.com/create-outstanding-dashboards-with-the-new-semantic-dashboard-package/
+- https://www.shinyapps.io/
+
 Appsilon Data Science
 =====================
 
