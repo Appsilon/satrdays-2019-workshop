@@ -25,6 +25,7 @@ install.packages("purrrlyr")
 install.packages("tidyverse")
 install.packages("ggvis")
 install.packages("RSQLite")
+install.packages(‘rsconnect’)
 ```
 
 Appsilon Data Science
