@@ -1,0 +1,1299 @@
+library(shiny)
+# Define UI for app that draws a histogram ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Hello Shiny!"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Slider for the number of bins ----
+      sliderInput(inputId = "bins",
+                  label = "Number of bins:",
+                  min = 1,
+                  max = 50,
+                  value = 30)
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Histogram ----
+      plotOutput(outputId = "distPlot")
+    )
+  )
+)
+# Define server logic required to draw a histogram ----
+server <- function(input, output) {
+  # Histogram of the Old Faithful Geyser Data ----
+  # with requested number of bins
+  # This expression that generates a histogram is wrapped in a call
+  # to renderPlot to indicate that:
+  #
+  # 1. It is "reactive" and therefore should be automatically
+  #    re-executed when inputs (input$bins) change
+  # 2. Its output type is a plot
+  output$distPlot <- renderPlot({
+    x    <- faithful$waiting
+    bins <- seq(min(x), max(x), length.out = input$bins + 1)
+    hist(x, breaks = bins, col = "#75AADB", border = "white",
+         xlab = "Waiting time to next eruption (in mins)",
+         main = "Histogram of waiting times")
+    })
+}
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+library(shiny)
+# Define UI for dataset viewer app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Shiny Text"),
+  # Sidebar layout with a input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Selector for choosing dataset ----
+      selectInput(inputId = "dataset",
+                  label = "Choose a dataset:",
+                  choices = c("rock", "pressure", "cars")),
+      # Input: Numeric entry for number of obs to view ----
+      numericInput(inputId = "obs",
+                   label = "Number of observations to view:",
+                   value = 10)
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Verbatim text for data summary ----
+      verbatimTextOutput("summary"),
+      # Output: HTML table with requested number of observations ----
+      tableOutput("view")
+    )
+  )
+)
+# Define server logic to summarize and view selected dataset ----
+server <- function(input, output) {
+  # Return the requested dataset ----
+  datasetInput <- reactive({
+    switch(input$dataset,
+           "rock" = rock,
+           "pressure" = pressure,
+           "cars" = cars)
+  })
+  # Generate a summary of the dataset ----
+  output$summary <- renderPrint({
+    dataset <- datasetInput()
+    summary(dataset)
+  })
+  # Show the first "n" observations ----
+  output$view <- renderTable({
+    head(datasetInput(), n = input$obs)
+  })
+}
+# Create Shiny app ----
+shinyApp(ui = ui, server = server)
+library(shiny)
+# Define UI for dataset viewer app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Reactivity"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Text for providing a caption ----
+      # Note: Changes made to the caption in the textInput control
+      # are updated in the output area immediately as you type
+      textInput(inputId = "caption",
+                label = "Caption:",
+                value = "Data Summary"),
+      # Input: Selector for choosing dataset ----
+      selectInput(inputId = "dataset",
+                  label = "Choose a dataset:",
+                  choices = c("rock", "pressure", "cars")),
+      # Input: Numeric entry for number of obs to view ----
+      numericInput(inputId = "obs",
+                   label = "Number of observations to view:",
+                   value = 10)
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Formatted text for caption ----
+      h3(textOutput("caption", container = span)),
+      # Output: Verbatim text for data summary ----
+      verbatimTextOutput("summary"),
+      # Output: HTML table with requested number of observations ----
+      tableOutput("view")
+    )
+  )
+)
+# Define server logic to summarize and view selected dataset ----
+server <- function(input, output) {
+  # Return the requested dataset ----
+  # By declaring datasetInput as a reactive expression we ensure
+  # that:
+  #
+  # 1. It is only called when the inputs it depends on changes
+  # 2. The computation and result are shared by all the callers,
+  #    i.e. it only executes a single time
+  datasetInput <- reactive({
+    switch(input$dataset,
+           "rock" = rock,
+           "pressure" = pressure,
+           "cars" = cars)
+  })
+  # Create caption ----
+  # The output$caption is computed based on a reactive expression
+  # that returns input$caption. When the user changes the
+  # "caption" field:
+  #
+  # 1. This function is automatically called to recompute the output
+  # 2. New caption is pushed back to the browser for re-display
+  #
+  # Note that because the data-oriented reactive expressions
+  # below don't depend on input$caption, those expressions are
+  # NOT called when input$caption changes
+  output$caption <- renderText({
+    input$caption
+  })
+  # Generate a summary of the dataset ----
+  # The output$summary depends on the datasetInput reactive
+  # expression, so will be re-executed whenever datasetInput is
+  # invalidated, i.e. whenever the input$dataset changes
+  output$summary <- renderPrint({
+    dataset <- datasetInput()
+    summary(dataset)
+  })
+  # Show the first "n" observations ----
+  # The output$view depends on both the databaseInput reactive
+  # expression and input$obs, so it will be re-executed whenever
+  # input$dataset or input$obs is changed
+  output$view <- renderTable({
+    head(datasetInput(), n = input$obs)
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+library(datasets)
+# Data pre-processing ----
+# Tweak the "am" variable to have nicer factor labels -- since this
+# doesn't rely on any user inputs, we can do this once at startup
+# and then use the value throughout the lifetime of the app
+mpgData <- mtcars
+mpgData$am <- factor(mpgData$am, labels = c("Automatic", "Manual"))
+# Define UI for miles per gallon app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Miles Per Gallon"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Selector for variable to plot against mpg ----
+      selectInput("variable", "Variable:",
+                  c("Cylinders" = "cyl",
+                    "Transmission" = "am",
+                    "Gears" = "gear")),
+      # Input: Checkbox for whether outliers should be included ----
+      checkboxInput("outliers", "Show outliers", TRUE)
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Formatted text for caption ----
+      h3(textOutput("caption")),
+      # Output: Plot of the requested variable against mpg ----
+      plotOutput("mpgPlot")
+    )
+  )
+)
+# Define server logic to plot various variables against mpg ----
+server <- function(input, output) {
+  # Compute the formula text ----
+  # This is in a reactive expression since it is shared by the
+  # output$caption and output$mpgPlot functions
+  formulaText <- reactive({
+    paste("mpg ~", input$variable)
+  })
+  # Return the formula text for printing as a caption ----
+  output$caption <- renderText({
+    formulaText()
+  })
+  # Generate a plot of the requested variable against mpg ----
+  # and only exclude outliers if requested
+  output$mpgPlot <- renderPlot({
+    boxplot(as.formula(formulaText()),
+            data = mpgData,
+            outline = input$outliers,
+            col = "#75AADB", pch = 19)
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+# Define UI for slider demo app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Sliders"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar to demonstrate various slider options ----
+    sidebarPanel(
+      # Input: Simple integer interval ----
+      sliderInput("integer", "Integer:",
+                  min = 0, max = 1000,
+                  value = 500),
+      # Input: Decimal interval with step value ----
+      sliderInput("decimal", "Decimal:",
+                  min = 0, max = 1,
+                  value = 0.5, step = 0.1),
+      # Input: Specification of range within an interval ----
+      sliderInput("range", "Range:",
+                  min = 1, max = 1000,
+                  value = c(200,500)),
+      # Input: Custom currency format for with basic animation ----
+      sliderInput("format", "Custom Format:",
+                  min = 0, max = 10000,
+                  value = 0, step = 2500,
+                  pre = "$", sep = ",",
+                  animate = TRUE),
+      # Input: Animation with custom interval (in ms) ----
+      # to control speed, plus looping
+      sliderInput("animation", "Looping Animation:",
+                  min = 1, max = 2000,
+                  value = 1, step = 10,
+                  animate =
+                    animationOptions(interval = 300, loop = TRUE))
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Table summarizing the values entered ----
+      tableOutput("values")
+    )
+  )
+)
+# Define server logic for slider examples ----
+server <- function(input, output) {
+  # Reactive expression to create data frame of all input values ----
+  sliderValues <- reactive({
+    data.frame(
+      Name = c("Integer",
+               "Decimal",
+               "Range",
+               "Custom Format",
+               "Animation"),
+      Value = as.character(c(input$integer,
+                             input$decimal,
+                             paste(input$range, collapse = " "),
+                             input$format,
+                             input$animation)),
+      stringsAsFactors = FALSE)
+  })
+  # Show the values in an HTML table ----
+  output$values <- renderTable({
+    sliderValues()
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+# Define UI for random distribution app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Tabsets"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Select the random distribution type ----
+      radioButtons("dist", "Distribution type:",
+                   c("Normal" = "norm",
+                     "Uniform" = "unif",
+                     "Log-normal" = "lnorm",
+                     "Exponential" = "exp")),
+      # br() element to introduce extra vertical spacing ----
+      br(),
+      # Input: Slider for the number of observations to generate ----
+      sliderInput("n",
+                  "Number of observations:",
+                  value = 500,
+                  min = 1,
+                  max = 1000)
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Tabset w/ plot, summary, and table ----
+      tabsetPanel(type = "tabs",
+                  tabPanel("Plot", plotOutput("plot")),
+                  tabPanel("Summary", verbatimTextOutput("summary")),
+                  tabPanel("Table", tableOutput("table"))
+      )
+    )
+  )
+)
+# Define server logic for random distribution app ----
+server <- function(input, output) {
+  # Reactive expression to generate the requested distribution ----
+  # This is called whenever the inputs change. The output functions
+  # defined below then use the value computed from this expression
+  d <- reactive({
+    dist <- switch(input$dist,
+                   norm = rnorm,
+                   unif = runif,
+                   lnorm = rlnorm,
+                   exp = rexp,
+                   rnorm)
+    dist(input$n)
+  })
+  # Generate a plot of the data ----
+  # Also uses the inputs to build the plot label. Note that the
+  # dependencies on the inputs and the data reactive expression are
+  # both tracked, and all expressions are called in the sequence
+  # implied by the dependency graph.
+  output$plot <- renderPlot({
+    dist <- input$dist
+    n <- input$n
+    hist(d(),
+         main = paste("r", dist, "(", n, ")", sep = ""),
+         col = "#75AADB", border = "white")
+  })
+  # Generate a summary of the data ----
+  output$summary <- renderPrint({
+    summary(d())
+  })
+  # Generate an HTML table view of the data ----
+  output$table <- renderTable({
+    d()
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+# Define UI for dataset viewer app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("More Widgets"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Select a dataset ----
+      selectInput("dataset", "Choose a dataset:",
+                  choices = c("rock", "pressure", "cars")),
+      # Input: Specify the number of observations to view ----
+      numericInput("obs", "Number of observations to view:", 10),
+      # Include clarifying text ----
+      helpText("Note: while the data view will show only the specified",
+               "number of observations, the summary will still be based",
+               "on the full dataset."),
+      # Input: actionButton() to defer the rendering of output ----
+      # until the user explicitly clicks the button (rather than
+      # doing it immediately when inputs change). This is useful if
+      # the computations required to render output are inordinately
+      # time-consuming.
+      actionButton("update", "Update View")
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Header + summary of distribution ----
+      h4("Summary"),
+      verbatimTextOutput("summary"),
+      # Output: Header + table of distribution ----
+      h4("Observations"),
+      tableOutput("view")
+    )
+  )
+)
+# Define server logic to summarize and view selected dataset ----
+server <- function(input, output) {
+  # Return the requested dataset ----
+  # Note that we use eventReactive() here, which depends on
+  # input$update (the action button), so that the output is only
+  # updated when the user clicks the button
+  datasetInput <- eventReactive(input$update, {
+    switch(input$dataset,
+           "rock" = rock,
+           "pressure" = pressure,
+           "cars" = cars)
+  }, ignoreNULL = FALSE)
+  # Generate a summary of the dataset ----
+  output$summary <- renderPrint({
+    dataset <- datasetInput()
+    summary(dataset)
+  })
+  # Show the first "n" observations ----
+  # The use of isolate() is necessary because we don't want the table
+  # to update whenever input$obs changes (only when the user clicks
+  # the action button)
+  output$view <- renderTable({
+    head(datasetInput(), n = isolate(input$obs))
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+# Define UI for data upload app ----
+ui <- fluidPage(
+  # App title ----
+  titlePanel("Uploading Files"),
+  # Sidebar layout with input and output definitions ----
+  sidebarLayout(
+    # Sidebar panel for inputs ----
+    sidebarPanel(
+      # Input: Select a file ----
+      fileInput("file1", "Choose CSV File",
+                multiple = FALSE,
+                accept = c("text/csv",
+                         "text/comma-separated-values,text/plain",
+                         ".csv")),
+      # Horizontal line ----
+      tags$hr(),
+      # Input: Checkbox if file has header ----
+      checkboxInput("header", "Header", TRUE),
+      # Input: Select separator ----
+      radioButtons("sep", "Separator",
+                   choices = c(Comma = ",",
+                               Semicolon = ";",
+                               Tab = "\t"),
+                   selected = ","),
+      # Input: Select quotes ----
+      radioButtons("quote", "Quote",
+                   choices = c(None = "",
+                               "Double Quote" = '"',
+                               "Single Quote" = "'"),
+                   selected = '"'),
+      # Horizontal line ----
+      tags$hr(),
+      # Input: Select number of rows to display ----
+      radioButtons("disp", "Display",
+                   choices = c(Head = "head",
+                               All = "all"),
+                   selected = "head")
+    ),
+    # Main panel for displaying outputs ----
+    mainPanel(
+      # Output: Data file ----
+      tableOutput("contents")
+    )
+  )
+)
+# Define server logic to read selected file ----
+server <- function(input, output) {
+  output$contents <- renderTable({
+    # input$file1 will be NULL initially. After the user selects
+    # and uploads a file, head of that data file by default,
+    # or all rows if selected, will be shown.
+    req(input$file1)
+    # when reading semicolon separated files,
+    # having a comma separator causes `read.csv` to error
+    tryCatch(
+      {
+        df <- read.csv(input$file1$datapath,
+                 header = input$header,
+                 sep = input$sep,
+                 quote = input$quote)
+      },
+      error = function(e) {
+        # return a safeError if a parsing error occurs
+        stop(safeError(e))
+      }
+    )
+    if(input$disp == "head") {
+      return(head(df))
+    }
+    else {
+      return(df)
+    }
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+# Define UI for displaying current time ----
+ui <- fluidPage(
+  h2(textOutput("currentTime"))
+)
+# Define server logic to show current time, update every second ----
+server <- function(input, output, session) {
+  output$currentTime <- renderText({
+    invalidateLater(1000, session)
+    paste("The current time is", Sys.time())
+  })
+}
+# Create Shiny app ----
+shinyApp(ui, server)
+library(shiny)
+library(ggplot2)  # for the diamonds dataset
+ui <- fluidPage(
+  title = "Examples of DataTables",
+  sidebarLayout(
+    sidebarPanel(
+      conditionalPanel(
+        'input.dataset === "diamonds"',
+        checkboxGroupInput("show_vars", "Columns in diamonds to show:",
+                           names(diamonds), selected = names(diamonds))
+      ),
+      conditionalPanel(
+        'input.dataset === "mtcars"',
+        helpText("Click the column header to sort a column.")
+      ),
+      conditionalPanel(
+        'input.dataset === "iris"',
+        helpText("Display 5 records by default.")
+      )
+    ),
+    mainPanel(
+      tabsetPanel(
+        id = 'dataset',
+        tabPanel("diamonds", DT::dataTableOutput("mytable1")),
+        tabPanel("mtcars", DT::dataTableOutput("mytable2")),
+        tabPanel("iris", DT::dataTableOutput("mytable3"))
+      )
+    )
+  )
+)
+server <- function(input, output) {
+  # choose columns to display
+  diamonds2 = diamonds[sample(nrow(diamonds), 1000), ]
+  output$mytable1 <- DT::renderDataTable({
+    DT::datatable(diamonds2[, input$show_vars, drop = FALSE])
+  })
+  # sorted columns are colored now because CSS are attached to them
+  output$mytable2 <- DT::renderDataTable({
+    DT::datatable(mtcars, options = list(orderClasses = TRUE))
+  })
+  # customize the length drop-down menu; display 5 rows per page by default
+  output$mytable3 <- DT::renderDataTable({
+    DT::datatable(iris, options = list(lengthMenu = c(5, 30, 50), pageLength = 5))
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+library(reactR)
+simpleTextInput <- function(inputId, default = "") {
+  createReactShinyInput(
+    inputId = inputId,
+    class = 'simple-text-input',
+    dependencies = htmltools::htmlDependency(
+      'simple-text-input',
+      '1.0.0',
+      src = file.path(getwd(), "js"),
+      script = 'input.js',
+      all_files = FALSE
+    ),
+    default = default,
+    container = tags$span
+  )
+}
+ui <- function(request) {
+  fluidPage(
+    titlePanel("reactR Input Demo"),
+    tags$p("Enter text under 'Input' below. It should show up under 'Output'."),
+    tags$p("You should also be able to bookmark this page and the input will retain its value."),
+    tags$p(bookmarkButton()),
+    tags$h1("Input"),
+    tags$div(
+      tags$p(simpleTextInput('simpleTextInput')),
+      tags$h1("Output"),
+      textOutput("simpleTextOutput")
+    )
+  )
+}
+server <- function(input, output, session) {
+  output$simpleTextOutput <- renderText(input$simpleTextInput)
+}
+shinyApp(ui, server, enableBookmarking = "url")
+# Define the UI
+ui <- bootstrapPage(
+  numericInput('n', 'Number of obs', n),
+  plotOutput('plot')
+)
+# Define the server code
+server <- function(input, output) {
+  output$plot <- renderPlot({
+    hist(runif(input$n))
+  })
+}
+# Return a Shiny app object
+shinyApp(ui = ui, server = server)
+library(shiny)
+ui <- fluidPage(
+  titlePanel("Dates and date ranges"),
+  column(4, wellPanel(
+    dateInput('date',
+      label = 'Date input: yyyy-mm-dd',
+      value = Sys.Date()
+    ),
+    dateInput('date2',
+      label = paste('Date input 2: string for starting value,',
+        'dd/mm/yy format, locale ja, range limited,',
+        'week starts on day 1 (Monday)'),
+      value = as.character(Sys.Date()),
+      min = Sys.Date() - 5, max = Sys.Date() + 5,
+      format = "dd/mm/yy",
+      startview = 'year', language = 'zh-TW', weekstart = 1
+    ),
+    dateRangeInput('dateRange',
+      label = 'Date range input: yyyy-mm-dd',
+      start = Sys.Date() - 2, end = Sys.Date() + 2
+    ),
+    dateRangeInput('dateRange2',
+      label = paste('Date range input 2: range is limited,',
+       'dd/mm/yy, language: fr, week starts on day 1 (Monday),',
+       'separator is "-", start view is year'),
+      start = Sys.Date() - 3, end = Sys.Date() + 3,
+      min = Sys.Date() - 10, max = Sys.Date() + 10,
+      separator = " - ", format = "dd/mm/yy",
+      startview = 'year', language = 'fr', weekstart = 1
+    )
+  )),
+  column(6,
+    verbatimTextOutput("dateText"),
+    verbatimTextOutput("dateText2"),
+    verbatimTextOutput("dateRangeText"),
+    verbatimTextOutput("dateRangeText2")
+  )
+)
+server <- function(input, output, session) {
+  # input$date and others are Date objects. When outputting
+  # text, we need to convert to character; otherwise it will
+  # print an integer rather than a date.
+  output$dateText  <- renderText({
+    paste("input$date is", as.character(input$date))
+  })
+  output$dateText2 <- renderText({
+    paste("input$date2 is", as.character(input$date2))
+  })
+  output$dateRangeText  <- renderText({
+    paste("input$dateRange is", 
+      paste(as.character(input$dateRange), collapse = " to ")
+    )
+  })
+  output$dateRangeText2 <- renderText({
+    paste("input$dateRange2 is", 
+      paste(as.character(input$dateRange2), collapse = " to ")
+    )
+  })
+}
+shinyApp(ui = ui, server = server)
+library(shiny)
+ui <- dashboardPage(
+  dashboardHeader(color = "blue"),
+  dashboardSidebar(side = "left", size = "thin", color = "teal",
+                   sidebarMenu(
+                     menuItem(tabName = "tab1", "Tab 1")
+                   )
+  ),
+  dashboardBody(tabItems(
+    tabItem(tabName = "tab1",
+            p("Tab 2")),
+    # https://semantic-ui.com/elements/input.html
+    div( class="ui left icon input loading",
+         shiny_text_input(input_id="aa",
+           tags$input(type = "text", placeholder = "Username")
+         ),
+         tags$i(class="search icon")
+      )
+    )
+  )
+)
+server <- function(input, output) {
+  observeEvent(input$aa,{
+    print(input$aa)
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+source("utils.R")
+ui <- dashboardPage(
+  dashboardHeader(color = "blue",
+                  title = "Movies App",
+                  dropdownMenuOutput("dropdown")
+                  ),
+  dashboardSidebar(
+    size = "thin", color = "teal",
+    sidebarMenu(
+      menuItem(tabName = "correlations", "Correlations"),
+      menuItem(tabName = "best", "Best movies")
+    )
+  ),
+  dashboardBody(
+    tabItems(
+      selected = 1,
+      tabItem(
+        tabName = "correlations",
+        fluidRow(
+          box(color = "blue",
+              title_side = "top left",
+              width = 5,
+              title = "Correlations",
+              sliderInput("reviews", "Reviews", 10, 300, 40, step = 10),
+              sliderInput("year", "Year released", 1940, 2014, value = c(1970, 2014),
+                          sep = ""),
+              selectInput("genre", "Genre", movie_genres)
+          ),
+          box(color = "green",
+              width = 11,
+              textOutput("n_oscar"),
+              textOutput("n_no_oscar"),
+              ggvisOutput("corrplot")
+          )
+        )
+      ),
+      tabItem(
+        tabName = "best",
+        fluidRow(
+          box(color = "orange", width = 15,
+              uiOutput("bestcards")
+              )
+        )
+      )
+    )
+  )
+)
+server <- shinyServer(function(input, output, session) {
+  output$dropdown <- renderDropdownMenu({
+    dropdownMenu(
+      notificationItem(input$genre, color = "teal", icon = "users"),
+      notificationItem(paste(input$year[1]," - ", input$year[2]),
+                       icon = "calendar", color = "red"),
+      show_counter = FALSE
+    )
+  })
+  movies <- reactive({
+    reviews <- input$reviews
+    minyear <- input$year[1]
+    maxyear <- input$year[2]
+    filter_all_movies(reviews, minyear, maxyear, input$genre)
+  })
+  
+  vis <- reactive({
+    movies %>%
+      ggvis(x = ~Meter, y = ~imdbRating) %>%
+      layer_points(size := 50, size.hover := 200,
+                   fillOpacity := 0.2, fillOpacity.hover := 0.5,
+                   stroke = ~has_oscar, key := ~ID) %>%
+      add_axis("x", title = "Meter") %>%
+      add_axis("y", title = "imdbRating") %>%
+      set_options(width = 600, height = 400)
+  })
+  vis %>% bind_shiny("corrplot")
+  output$n_oscar <- renderText({
+    paste("Number of Oscar movies:", 
+      nrow(movies() %>% filter(has_oscar=="Yes"))
+    )
+  })
+  output$n_no_oscar <- renderText({ 
+    paste("Number of movies without Oscar:", 
+          nrow(movies() %>% filter(has_oscar=="No"))
+    )
+  })
+  output$bestcards <- renderUI({
+    uicards(class = "three", 
+        movies() %>% arrange(desc(imdbRating)) %>% top_n(10, imdbRating) %>% 
+        purrrlyr::by_row(~{
+          uicard(div(class = "content",
+                     div(class = "header", 
+                         .$Title),
+                     div(class = "meta",
+                         paste("Director:", .$Director)),
+                     div(class = "description",
+                         paste("Cast:", .$Cast))
+                     )
+                 )
+              }) %>% { .$.out })
+  })
+})
+shinyApp(ui, server)
+library(shiny)
+library(semantic.dashboard)
+library(shiny.semantic)
+source("utils.R")
+ui <- dashboardPage(
+  dashboardHeader( title = "Movies App"
+  ),
+  dashboardSidebar(
+    size = "thin", color = "teal",
+    sidebarMenu(
+      menuItem(tabName = "correlations", "Correlations"),
+      menuItem(tabName = "best", "Best movies")
+    )
+  ),
+  dashboardBody(
+  )
+)
+server <- shinyServer(function(input, output, session) {
+})
+shinyApp(ui, server)
+library(shiny)
+make_row <- function(func, base_id, label, ...) {
+  tagList(
+    fluidRow(
+      column(12, hr())
+    ),
+    fluidRow(
+      column(2,
+        h4(label)
+      ),
+      column(5,
+        func(base_id, ...)
+      ),
+      column(5,
+        func(paste0(base_id, "a"), ...)
+      )
+    ),
+    br()
+  )
+}
+ui <- fluidPage(
+  tags$p(
+    tags$strong("Instructions:"),
+    "Verify that each row contains two identical outputs."
+  ),
+  fluidRow(
+    column(2),
+    column(5, h2("Sync")),
+    column(5, h2("Async"))
+  ),
+  make_row(plotOutput, "plot", "Plot"),
+  make_row(textOutput, "text", "Text"),
+  make_row(verbatimTextOutput, "print", "Print"),
+  make_row(verbatimTextOutput, "print2", "Print 2"),
+  make_row(dataTableOutput, "datatable", "Data Table"),
+  make_row(imageOutput, "image", "Image", height = "auto"),
+  make_row(tableOutput, "table", "Table"),
+  make_row(uiOutput, "ui", "UI")
+)
+server <- function(input, output, session) {
+  output$plot <- renderPlot({
+    plot(cars)
+  })
+  output$plota <- renderPlot({
+    future({ Sys.sleep(1) }) %...>% {
+      plot(cars)
+    }
+  })
+  output$text <- renderText({
+    "hello"
+  })
+  output$texta <- renderText({
+    future({ Sys.sleep(1); "hello" })
+  })
+  output$print <- renderPrint({
+    print("hello")
+  })
+  output$printa <- renderPrint({
+    future({ Sys.sleep(1) }) %...>% { print("hello") }
+  })
+  output$print2 <- renderPrint({
+    "hello"
+  })
+  output$print2a <- renderPrint({
+    future({ Sys.sleep(1) }) %...>% { "hello" }
+  })
+  output$datatable <- renderDataTable({
+    head(cars)
+  })
+  output$datatablea <- renderDataTable({
+    future({ Sys.sleep(1); head(cars) })
+  })
+  output$image <- renderImage({
+    path <- tempfile(fileext = ".gif")
+    download.file("https://www.google.com/images/logo.gif", path, mode = "wb")
+    list(src = path)
+  }, deleteFile = TRUE)
+  output$imagea <- renderImage({
+    future({
+      path <- tempfile(fileext = ".gif")
+      download.file("https://www.google.com/images/logo.gif", path, mode = "wb")
+      path
+    }) %...>% {
+      list(src = .)
+    }
+  }, deleteFile = TRUE)
+  output$table <- renderTable({
+    head(cars)
+  })
+  output$tablea <- renderTable({
+    future({ Sys.sleep(1); head(cars) })
+  })
+  output$ui <- renderUI({
+    h1("hello world")
+  })
+  output$uia <- renderUI({
+    future({ Sys.sleep(1); h1("hello world") })
+  })
+}
+shinyApp(ui, server)
+library(ggplot2)
+library(Cairo)   # For nicer ggplot2 output when deployed on Linux
+ui <- fluidPage(
+  fluidRow(
+    column(width = 4, class = "well",
+      h4("Brush and double-click to zoom"),
+      plotOutput("plot1", height = 300,
+        dblclick = "plot1_dblclick",
+        brush = brushOpts(
+          id = "plot1_brush",
+          resetOnNew = TRUE
+        )
+      )
+    ),
+    column(width = 8, class = "well",
+      h4("Left plot controls right plot"),
+      fluidRow(
+        column(width = 6,
+          plotOutput("plot2", height = 300,
+            brush = brushOpts(
+              id = "plot2_brush",
+              resetOnNew = TRUE
+            )
+          )
+        ),
+        column(width = 6,
+          plotOutput("plot3", height = 300)
+        )
+      )
+    )
+  )
+)
+server <- function(input, output) {
+  # -------------------------------------------------------------------
+  # Single zoomable plot (on left)
+  ranges <- reactiveValues(x = NULL, y = NULL)
+  output$plot1 <- renderPlot({
+    ggplot(mtcars, aes(wt, mpg)) +
+      geom_point() +
+      coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)
+  })
+  # When a double-click happens, check if there's a brush on the plot.
+  # If so, zoom to the brush bounds; if not, reset the zoom.
+  observeEvent(input$plot1_dblclick, {
+    brush <- input$plot1_brush
+    if (!is.null(brush)) {
+      ranges$x <- c(brush$xmin, brush$xmax)
+      ranges$y <- c(brush$ymin, brush$ymax)
+    } else {
+      ranges$x <- NULL
+      ranges$y <- NULL
+    }
+  })
+  # -------------------------------------------------------------------
+  # Linked plots (middle and right)
+  ranges2 <- reactiveValues(x = NULL, y = NULL)
+  output$plot2 <- renderPlot({
+    ggplot(mtcars, aes(wt, mpg)) +
+      geom_point()
+  })
+  output$plot3 <- renderPlot({
+    ggplot(mtcars, aes(wt, mpg)) +
+      geom_point() +
+      coord_cartesian(xlim = ranges2$x, ylim = ranges2$y, expand = FALSE)
+  })
+  # When a double-click happens, check if there's a brush on the plot.
+  # If so, zoom to the brush bounds; if not, reset the zoom.
+  observe({
+    brush <- input$plot2_brush
+    if (!is.null(brush)) {
+      ranges2$x <- c(brush$xmin, brush$xmax)
+      ranges2$y <- c(brush$ymin, brush$ymax)
+    } else {
+      ranges2$x <- NULL
+      ranges2$y <- NULL
+    }
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+ui <- basicPage(
+  plotOutput("plot1", click = "plot_click"),
+  verbatimTextOutput("info")
+)
+server <- function(input, output) {
+  output$plot1 <- renderPlot({
+    plot(mtcars$wt, mtcars$mpg)
+  })
+  output$info <- renderPrint({
+    # With base graphics, need to tell it what the x and y variables are.
+    nearPoints(mtcars, input$plot_click, xvar = "wt", yvar = "mpg")
+    # nearPoints() also works with hover and dblclick events
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+library(png)
+ui <- fluidPage(
+  # Some custom CSS for a smaller font for preformatted text
+  tags$head(
+    tags$style(HTML("
+      pre, table.table {
+        font-size: smaller;
+      }
+    "))
+  ),
+  fluidRow(
+    column(width = 4),
+    column(width = 4,
+      br(),
+      # In a imageOutput, passing values for click, dblclick, hover, or brush
+      # will enable those interactions.
+      imageOutput("image1", height = 350,
+        # Equivalent to: click = clickOpts(id = "image_click")
+        click = "image_click",
+        dblclick = dblclickOpts(
+          id = "image_dblclick"
+        ),
+        hover = hoverOpts(
+          id = "image_hover"
+        ),
+        brush = brushOpts(
+          id = "image_brush"
+        )
+      ),
+      br()
+    )
+  ),
+  fluidRow(
+    column(width = 3,
+      verbatimTextOutput("click_info")
+    ),
+    column(width = 3,
+      verbatimTextOutput("dblclick_info")
+    ),
+    column(width = 3,
+      verbatimTextOutput("hover_info")
+    ),
+    column(width = 3,
+      verbatimTextOutput("brush_info")
+    )
+  )
+)
+server <- function(input, output, session) {
+  # Generate an image with black lines every 10 pixels
+  output$image1 <- renderImage({
+    # Get width and height of image output
+    width  <- session$clientData$output_image1_width
+    height <- session$clientData$output_image1_height
+    npixels <- width * height
+    # Fill the pixels for R, G, B
+    m <- matrix(1, nrow = height, ncol = width)
+    # Add gray vertical and horizontal lines every 10 pixels
+    m[seq_len(ceiling(height/10)) * 10 - 9, ] <- 0.75
+    m[, seq_len(ceiling(width/10)) * 10 - 9]  <- 0.75
+    # Convert the vector to an array with 3 planes
+    img <- array(c(m, m, m), dim = c(height, width, 3))
+    # Write it to a temporary file
+    outfile <- tempfile(fileext = ".png")
+    writePNG(img, target = outfile)
+    # Return a list containing information about the image
+    list(
+      src = outfile,
+      contentType = "image/png",
+      width = width,
+      height = height,
+      alt = "This is alternate text"
+    )
+  })
+  output$click_info <- renderPrint({
+    cat("input$image_click:\n")
+    str(input$image_click)
+  })
+  output$hover_info <- renderPrint({
+    cat("input$image_hover:\n")
+    str(input$image_hover)
+  })
+  output$dblclick_info <- renderPrint({
+    cat("input$image_dblclick:\n")
+    str(input$image_dblclick)
+  })
+  output$brush_info <- renderPrint({
+    cat("input$image_brush:\n")
+    str(input$image_brush)
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+ui <- function(request) {
+  fluidPage(
+    plotOutput("plot"),
+    sliderInput("n", "Number of observations", 1, nrow(faithful), 100),
+    bookmarkButton()
+  )
+}
+server <- function(input, output, session) {
+  output$plot <- renderPlot({
+    hist(faithful$eruptions[seq_len(input$n)], breaks = 40)
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+ui <- fluidPage(
+  title = 'Creating a UI from a loop',
+  sidebarLayout(
+    sidebarPanel(
+      # create some select inputs
+      lapply(1:5, function(i) {
+        selectInput(paste0('a', i), paste0('SelectA', i),
+                    choices = sample(LETTERS, 5))
+      })
+    ),
+    mainPanel(
+      verbatimTextOutput('a_out'),
+      # UI output
+      lapply(1:10, function(i) {
+        uiOutput(paste0('b', i))
+      })
+    )
+  )
+)
+server <- function(input, output, session) {
+  # note we use the syntax input[['foo']] instead of input$foo, because we have
+  # to construct the id as a character string, then use it to access the value;
+  # same thing applies to the output object below
+  output$a_out <- renderPrint({
+    res <- lapply(1:5, function(i) input[[paste0('a', i)]])
+    str(setNames(res, paste0('a', 1:5)))
+  })
+  lapply(1:10, function(i) {
+    output[[paste0('b', i)]] <- renderUI({
+      strong(paste0('Hi, this is output B#', i))
+    })
+  })
+}
+shinyApp(ui, server)
+library(shiny)
+ui <- pageWithSidebar(
+  headerPanel('Iris k-means clustering'),
+  sidebarPanel(
+    selectInput('xcol', 'X Variable', names(iris)),
+    selectInput('ycol', 'Y Variable', names(iris),
+                selected=names(iris)[[2]]),
+    numericInput('clusters', 'Cluster count', 3,
+                 min = 1, max = 9)
+  ),
+  mainPanel(
+    plotOutput('plot1')
+  )
+)
+server <- function(input, output, session) {
+  # Combine the selected variables into a new data frame
+  selectedData <- reactive({
+    iris[, c(input$xcol, input$ycol)]
+  })
+  clusters <- reactive({
+    kmeans(selectedData(), input$clusters)
+  })
+  output$plot1 <- renderPlot({
+    palette(c("#E41A1C", "#377EB8", "#4DAF4A", "#984EA3",
+      "#FF7F00", "#FFFF33", "#A65628", "#F781BF", "#999999"))
+    par(mar = c(5.1, 4.1, 0, 1))
+    plot(selectedData(),
+         col = clusters()$cluster,
+         pch = 20, cex = 3)
+    points(clusters()$centers, pch = 4, cex = 4, lwd = 4)
+  })
+}
+library(shiny)
+ui <- function() {
+  shinyUI(
+    semanticPage(
+      title = "Id slider example",
+      suppressDependencies("bootstrap"),
+      suppressDependencies("semantic"),
+      uiOutput("slider", width = "200px"),
+      br(),
+      textOutput("val")
+    )
+  )
+}
+server <- shinyServer(function(input, output) {
+  output$slider <- renderUI({
+    shiny.semantic::slider_input("my_slider", 0, 10, 5, color = "red")
+  })
+  output$val <- renderPrint({
+    input$my_slider
+  })
+})
+shinyApp(ui = ui(), server = server)
+library(shiny)
+# Example comes from https://github.com/rstudio/shiny-examples/
+ui <- fluidPage(
+  titlePanel("Dynamically generated user interface components"),
+  fluidRow(
+    
+    column(3, wellPanel(
+      selectInput("input_type", "Input type",
+                  c("slider", "text", "numeric", "checkbox",
+                    "checkboxGroup", "radioButtons", "selectInput",
+                    "selectInput (multi)", "date", "daterange"
+                  )
+      )
+    )),
+    
+    column(3, wellPanel(
+      # This outputs the dynamic UI component
+      uiOutput("ui")
+    )),
+    
+    column(3,
+           tags$p("Input type:"),
+           verbatimTextOutput("input_type_text"),
+           tags$p("Dynamic input value:"),
+           verbatimTextOutput("dynamic_value")
+    )
+  )
+)
+server <- function(input, output) {
+  
+  output$ui <- renderUI({
+    if (is.null(input$input_type))
+      return()
+    
+    # Depending on input$input_type, we'll generate a different
+    # UI component and send it to the client.
+    switch(input$input_type,
+           "slider" = sliderInput("dynamic", "Dynamic",
+                                  min = 1, max = 20, value = 10),
+           "text" = textInput("dynamic", "Dynamic",
+                              value = "starting value"),
+           "numeric" =  numericInput("dynamic", "Dynamic",
+                                     value = 12),
+           "checkbox" = checkboxInput("dynamic", "Dynamic",
+                                      value = TRUE),
+           "checkboxGroup" = checkboxGroupInput("dynamic", "Dynamic",
+                                                choices = c("Option 1" = "option1",
+                                                            "Option 2" = "option2"),
+                                                selected = "option2"
+           ),
+           "radioButtons" = radioButtons("dynamic", "Dynamic",
+                                         choices = c("Option 1" = "option1",
+                                                     "Option 2" = "option2"),
+                                         selected = "option2"
+           ),
+           "selectInput" = selectInput("dynamic", "Dynamic",
+                                       choices = c("Option 1" = "option1",
+                                                   "Option 2" = "option2"),
+                                       selected = "option2"
+           ),
+           "selectInput (multi)" = selectInput("dynamic", "Dynamic",
+                                               choices = c("Option 1" = "option1",
+                                                           "Option 2" = "option2"),
+                                               selected = c("option1", "option2"),
+                                               multiple = TRUE
+           ),
+           "date" = dateInput("dynamic", "Dynamic"),
+           "daterange" = dateRangeInput("dynamic", "Dynamic")
+    )
+  })
+  
+  output$input_type_text <- renderText({
+    input$input_type
+  })
+  
+  output$dynamic_value <- renderPrint({
+    str(input$dynamic)
+  })
+  
+}
+shinyApp(ui = ui, server = server)
+library(shiny)
+ui <- fluidPage()
+server <- function(input, output) {}
+shinyApp(ui = ui, server = server)
