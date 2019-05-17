@@ -57,7 +57,7 @@ sample_next_char <- function(preds, temperature = 1.0) {
   which.max(t(rmultinom(1, 1, preds)))
 }
 
-for (epoch in 1:1) {
+for (epoch in 1:30) {
   cat("epoch", epoch, "\n")
   # Fit the model for 1 epoch on the available training data
   model %>% fit(x, y, batch_size = 128, epochs = 1) 
